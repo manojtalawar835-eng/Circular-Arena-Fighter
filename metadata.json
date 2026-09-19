@@ -1,0 +1,6 @@
+{
+  "name": "Circular Arena Fighter",
+  "description": "Action-packed circular arena duel game featuring character avatars, dynamic weapon spawns, projectile combat, authentic meme audio and sound effects, and full game ZIP export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
