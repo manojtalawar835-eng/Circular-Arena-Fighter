@@ -6,6 +6,7 @@ interface OnlineRoomModalProps {
   onClose: () => void;
   onCreateRoom: () => void;
   onJoinRoom: (code: string) => void;
+  onLeaveRoom?: () => void;
   roomCode: string | null;
   playerSlot: 'p1' | 'p2' | null;
   isWaitingForOpponent: boolean;
@@ -18,6 +19,7 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
   onClose,
   onCreateRoom,
   onJoinRoom,
+  onLeaveRoom,
   roomCode,
   playerSlot,
   isWaitingForOpponent,
@@ -103,8 +105,18 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
             </div>
 
             <div className="text-xs text-slate-400 bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
-              💡 <strong>How to play:</strong> Tell your friend to open the game on their phone or PC, click <strong>"Play Online"</strong>, and enter code <strong className="text-indigo-300">{roomCode}</strong>.
+              💡 <strong>How to play:</strong> Tell your friend to open the game on their phone or PC, click <strong>"Online Codes"</strong>, and enter code <strong className="text-indigo-300">{roomCode}</strong>.
             </div>
+
+            {onLeaveRoom && (
+              <button
+                id="cancel-room-btn"
+                onClick={onLeaveRoom}
+                className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition-colors"
+              >
+                Cancel & Return
+              </button>
+            )}
           </div>
         ) : roomCode && opponentName ? (
           /* State 2: Opponent Connected! */
@@ -123,13 +135,25 @@ export const OnlineRoomModal: React.FC<OnlineRoomModalProps> = ({
               </div>
             </div>
 
-            <button
-              id="start-online-match-btn"
-              onClick={onClose}
-              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg transition-all"
-            >
-              Start Battle Now!
-            </button>
+            <div className="flex gap-2">
+              <button
+                id="start-online-match-btn"
+                onClick={onClose}
+                className="flex-1 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg transition-all cursor-pointer"
+              >
+                Start Battle Now!
+              </button>
+
+              {onLeaveRoom && (
+                <button
+                  id="leave-match-btn"
+                  onClick={onLeaveRoom}
+                  className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  Leave
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           /* State 3: Menu - Create or Join */

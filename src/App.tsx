@@ -77,141 +77,177 @@ export default function App() {
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState<boolean>(false);
 
   // Online Multiplayer State
+  // Online Multiplayer State
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [playerSlot, setPlayerSlot] = useState<'p1' | 'p2' | null>(null);
   const [isWaitingForOpponent, setIsWaitingForOpponent] = useState<boolean>(false);
   const [opponentName, setOpponentName] = useState<string | null>(null);
   const [onlineError, setOnlineError] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const playerIdRef = useRef<string | null>(null);
+  const lastRestartCounterRef = useRef<number>(0);
+  const lastBroadcastRef = useRef<{ vx: number; vy: number }>({ vx: 0, vy: 0 });
 
   // Manual movements
   const [manualMoveP1, setManualMoveP1] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [manualMoveP2, setManualMoveP2] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Connect / get WebSocket instance
-  const getWebSocket = useCallback(() => {
-    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
-      return wsRef.current;
-    }
-
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const ws = new WebSocket(`${protocol}//${host}`);
-
-    ws.onopen = () => {
-      setOnlineError(null);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        switch (data.type) {
-          case 'ROOM_CREATED':
-            setRoomCode(data.code);
-            setPlayerSlot('p1');
-            setIsWaitingForOpponent(true);
-            setOnlineError(null);
-            setGameMode('single'); // p1 controls Modi
-            break;
-
-          case 'ROOM_JOINED':
-            setRoomCode(data.code);
-            setPlayerSlot('p2');
-            setIsWaitingForOpponent(false);
-            setOpponentName(data.opponentName || 'Player 1');
-            setOnlineError(null);
-            setGameMode('single'); // p2 controls Abhijit
-            break;
-
-          case 'OPPONENT_JOINED':
-            setIsWaitingForOpponent(false);
-            setOpponentName(data.opponentName || 'Player 2');
-            soundEngine.playVictory();
-            break;
-
-          case 'OPPONENT_INPUT':
-            if (data.slot === 'p1') {
-              setManualMoveP1({ x: data.vx, y: data.vy });
-            } else if (data.slot === 'p2') {
-              setManualMoveP2({ x: data.vx, y: data.vy });
-            }
-            break;
-
-          case 'OPPONENT_DISCONNECTED':
-            setOpponentName(null);
-            setOnlineError('Opponent disconnected from room.');
-            break;
-
-          case 'MATCH_RESTARTED':
-            handleLocalRestart();
-            break;
-
-          case 'ERROR':
-            setOnlineError(data.message);
-            break;
-        }
-      } catch (err) {
-        console.error('WS client message error:', err);
-      }
-    };
-
-    ws.onerror = () => {
-      setOnlineError('Multiplayer server connection error.');
-    };
-
-    ws.onclose = () => {
-      // Clean up
-    };
-
-    wsRef.current = ws;
-    return ws;
-  }, []);
-
-  // Send input to opponent over WebSocket
+  // Send movement input to opponent via reliable REST API
   const broadcastInput = useCallback((vx: number, vy: number) => {
-    if (!roomCode || !playerSlot || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    wsRef.current.send(JSON.stringify({
-      type: 'GAME_INPUT',
-      vx,
-      vy,
-      slot: playerSlot
-    }));
+    if (!roomCode || !playerSlot || !playerIdRef.current) return;
+    if (lastBroadcastRef.current.vx === vx && lastBroadcastRef.current.vy === vy) return;
+    lastBroadcastRef.current = { vx, vy };
+
+    fetch('/api/rooms/input', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: roomCode,
+        playerId: playerIdRef.current,
+        slot: playerSlot,
+        vx,
+        vy
+      })
+    }).catch(() => {});
   }, [roomCode, playerSlot]);
 
-  // Create Room
-  const handleCreateOnlineRoom = () => {
+  // Create Room via REST API (100% reliable through Cloud Run reverse proxy)
+  const handleCreateOnlineRoom = async () => {
     setOnlineError(null);
-    const ws = getWebSocket();
-    const sendCreate = () => {
-      ws.send(JSON.stringify({
-        type: 'CREATE_ROOM',
-        name: fighter1.name
-      }));
-    };
-    if (ws.readyState === WebSocket.OPEN) {
-      sendCreate();
-    } else {
-      ws.onopen = () => sendCreate();
+    try {
+      const res = await fetch('/api/rooms/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: fighter1.name })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRoomCode(data.code);
+        setPlayerSlot('p1');
+        playerIdRef.current = data.playerId;
+        setIsWaitingForOpponent(true);
+        setOpponentName(null);
+        setGameMode('single');
+      } else {
+        setOnlineError(data.error || 'Failed to create arena room.');
+      }
+    } catch {
+      setOnlineError('Could not reach multiplayer server. Please try again.');
     }
   };
 
-  // Join Room
-  const handleJoinOnlineRoom = (code: string) => {
+  // Join Room via REST API
+  const handleJoinOnlineRoom = async (code: string) => {
     setOnlineError(null);
-    const ws = getWebSocket();
-    const sendJoin = () => {
-      ws.send(JSON.stringify({
-        type: 'JOIN_ROOM',
-        code: code.trim(),
-        name: fighter2.name
-      }));
-    };
-    if (ws.readyState === WebSocket.OPEN) {
-      sendJoin();
-    } else {
-      ws.onopen = () => sendJoin();
+    try {
+      const res = await fetch('/api/rooms/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: code.trim(),
+          name: fighter2.name
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRoomCode(data.code);
+        setPlayerSlot('p2');
+        playerIdRef.current = data.playerId;
+        setOpponentName(data.opponentName || 'Player 1');
+        setIsWaitingForOpponent(false);
+        setGameMode('single');
+        soundEngine.playVictory();
+      } else {
+        setOnlineError(data.error || 'Room not found or already full.');
+      }
+    } catch {
+      setOnlineError('Could not connect to room. Please check code.');
     }
   };
+
+  // Leave / cancel online room
+  const handleLeaveOnlineRoom = () => {
+    setRoomCode(null);
+    setPlayerSlot(null);
+    setIsWaitingForOpponent(false);
+    setOpponentName(null);
+    setOnlineError(null);
+    playerIdRef.current = null;
+    setGameMode('spectate');
+    handleLocalRestart();
+  };
+
+  // Local restart helper
+  const handleLocalRestart = useCallback(() => {
+    setWinner(null);
+    setFighter1((prev) => ({
+      ...prev,
+      hp: prev.maxHp,
+      x: 180,
+      y: 260,
+      vx: -1.2,
+      vy: 0.8,
+      currentWeapon: null,
+      weaponAmmo: 0
+    }));
+    setFighter2((prev) => ({
+      ...prev,
+      hp: prev.maxHp,
+      x: 340,
+      y: 260,
+      vx: 1.2,
+      vy: -0.8,
+      currentWeapon: null,
+      weaponAmmo: 0
+    }));
+    setIsPlaying(true);
+    soundEngine.playPickup();
+  }, []);
+
+  // Real-time synchronization loop
+  useEffect(() => {
+    if (!roomCode || !playerIdRef.current) return;
+
+    let isSubscribed = true;
+
+    const pollInterval = setInterval(async () => {
+      if (!isSubscribed || !roomCode || !playerIdRef.current) return;
+      try {
+        const res = await fetch(`/api/rooms/${roomCode}/poll?playerId=${playerIdRef.current}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.success || !isSubscribed) return;
+
+        // Check if opponent connected
+        if (data.hasOpponent && data.opponentName) {
+          setIsWaitingForOpponent(false);
+          setOpponentName((prev) => {
+            if (!prev) soundEngine.playVictory();
+            return data.opponentName;
+          });
+        }
+
+        // Sync opponent's real-time movement
+        if (playerSlot === 'p1') {
+          setManualMoveP2({ x: data.opponentVx || 0, y: data.opponentVy || 0 });
+        } else if (playerSlot === 'p2') {
+          setManualMoveP1({ x: data.opponentVx || 0, y: data.opponentVy || 0 });
+        }
+
+        // Sync restart if opponent triggered it
+        if (data.restartCounter > lastRestartCounterRef.current) {
+          lastRestartCounterRef.current = data.restartCounter;
+          handleLocalRestart();
+        }
+      } catch {
+        // Quiet retry on network hiccups
+      }
+    }, 90);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(pollInterval);
+    };
+  }, [roomCode, playerSlot, handleLocalRestart]);
 
   // Keyboard controls for single, 2-player, and online modes
   useEffect(() => {
@@ -313,38 +349,19 @@ export default function App() {
     setWinner(winningFighter);
   }, []);
 
-  // Local restart helper
-  const handleLocalRestart = useCallback(() => {
-    setWinner(null);
-    setFighter1((prev) => ({
-      ...prev,
-      hp: prev.maxHp,
-      x: 180,
-      y: 260,
-      vx: -1.2,
-      vy: 0.8,
-      currentWeapon: null,
-      weaponAmmo: 0
-    }));
-    setFighter2((prev) => ({
-      ...prev,
-      hp: prev.maxHp,
-      x: 340,
-      y: 260,
-      vx: 1.2,
-      vy: -0.8,
-      currentWeapon: null,
-      weaponAmmo: 0
-    }));
-    setIsPlaying(true);
-    soundEngine.playPickup();
-  }, []);
-
   // Restart match (syncs with room if in online match)
   const handleRestart = useCallback(() => {
     handleLocalRestart();
-    if (roomCode && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'RESTART_MATCH' }));
+    if (roomCode && playerIdRef.current) {
+      fetch('/api/rooms/input', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: roomCode,
+          playerId: playerIdRef.current,
+          restart: true
+        })
+      }).catch(() => {});
     }
   }, [roomCode, handleLocalRestart]);
 
@@ -465,6 +482,7 @@ export default function App() {
         onClose={() => setIsOnlineModalOpen(false)}
         onCreateRoom={handleCreateOnlineRoom}
         onJoinRoom={handleJoinOnlineRoom}
+        onLeaveRoom={handleLeaveOnlineRoom}
         roomCode={roomCode}
         playerSlot={playerSlot}
         isWaitingForOpponent={isWaitingForOpponent}
