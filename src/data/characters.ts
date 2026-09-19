@@ -113,14 +113,14 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     title: 'The Leader',
     primaryColor: '#EF4444',
     barColor: '#EF4444',
-    avatarSvg: createModiSvg(),
-    speechGreeting: 'Wah Modi ji Wah!',
+    avatarSvg: '/modi.png',
+    speechGreeting: 'लवडे न भोजन',
     voiceLines: [
-      'Wah Modi ji Wah!',
-      'Mitron!',
-      'Aapda ko avsar me badlo!',
-      'Khatam! Tata! Bye-bye!',
-      'Abki baar arena paar!'
+      'लवडे न भोजन',
+      'वाह मोदी जी वाह!',
+      'मित्रों!',
+      'खत्म! टाटा! बाय-बाय!',
+      'अबकी बार अरीना पार!'
     ]
   },
   {
@@ -130,14 +130,14 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     title: 'The Challenger',
     primaryColor: '#3B82F6',
     barColor: '#3B82F6',
-    avatarSvg: createAbhijitSvg(),
-    speechGreeting: 'Gaon me sarkari school theek karo!',
+    avatarSvg: '/abhijit.png',
+    speechGreeting: 'ओहो हमारे गांव में सरकारी स्कूल ठीक करो...',
     voiceLines: [
-      'Aho gaon me sarkari school theek karo...',
-      'Lene ke dene pad gaye!',
-      'Arey bhai bhai bhai!',
-      'Maza aaya!',
-      'Ye badhiya tha guru!'
+      'ओहो हमारे गांव में सरकारी स्कूल ठीक करो...',
+      'लेने के देने पड़ गए!',
+      'अरे भाई भाई भाई!',
+      'मज़ा आया!',
+      'ये बढ़िया था गुरु!'
     ]
   },
   {

@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ArenaCanvas } from './components/ArenaCanvas';
 import { HealthBarHeader } from './components/HealthBarHeader';
 import { WinnerModal } from './components/WinnerModal';
 import { ControlsBar } from './components/ControlsBar';
 import { CharacterSelectModal } from './components/CharacterSelectModal';
 import { AppExportModal } from './components/AppExportModal';
+import { OnlineRoomModal } from './components/OnlineRoomModal';
 import { VirtualJoystick } from './components/VirtualJoystick';
 import { CHARACTER_PRESETS } from './data/characters';
 import { Fighter, CharacterPreset, GameMode } from './types';
@@ -67,15 +68,152 @@ export default function App() {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [winner, setWinner] = useState<Fighter | null>(null);
 
+  // Subtitle banner for video meme audio ("लवडे न भोजन" / "ओहो हमारे गांव में सरकारी स्कूल ठीक करो...")
+  const [activeSubtitle, setActiveSubtitle] = useState<string | null>(null);
+
   // Modals
   const [isCharModalOpen, setIsCharModalOpen] = useState<boolean>(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+  const [isOnlineModalOpen, setIsOnlineModalOpen] = useState<boolean>(false);
+
+  // Online Multiplayer State
+  const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [playerSlot, setPlayerSlot] = useState<'p1' | 'p2' | null>(null);
+  const [isWaitingForOpponent, setIsWaitingForOpponent] = useState<boolean>(false);
+  const [opponentName, setOpponentName] = useState<string | null>(null);
+  const [onlineError, setOnlineError] = useState<string | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Manual movements
   const [manualMoveP1, setManualMoveP1] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [manualMoveP2, setManualMoveP2] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Keyboard controls for single & 2-player modes
+  // Connect / get WebSocket instance
+  const getWebSocket = useCallback(() => {
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+      return wsRef.current;
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const ws = new WebSocket(`${protocol}//${host}`);
+
+    ws.onopen = () => {
+      setOnlineError(null);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        switch (data.type) {
+          case 'ROOM_CREATED':
+            setRoomCode(data.code);
+            setPlayerSlot('p1');
+            setIsWaitingForOpponent(true);
+            setOnlineError(null);
+            setGameMode('single'); // p1 controls Modi
+            break;
+
+          case 'ROOM_JOINED':
+            setRoomCode(data.code);
+            setPlayerSlot('p2');
+            setIsWaitingForOpponent(false);
+            setOpponentName(data.opponentName || 'Player 1');
+            setOnlineError(null);
+            setGameMode('single'); // p2 controls Abhijit
+            break;
+
+          case 'OPPONENT_JOINED':
+            setIsWaitingForOpponent(false);
+            setOpponentName(data.opponentName || 'Player 2');
+            soundEngine.playVictory();
+            break;
+
+          case 'OPPONENT_INPUT':
+            if (data.slot === 'p1') {
+              setManualMoveP1({ x: data.vx, y: data.vy });
+            } else if (data.slot === 'p2') {
+              setManualMoveP2({ x: data.vx, y: data.vy });
+            }
+            break;
+
+          case 'OPPONENT_DISCONNECTED':
+            setOpponentName(null);
+            setOnlineError('Opponent disconnected from room.');
+            break;
+
+          case 'MATCH_RESTARTED':
+            handleLocalRestart();
+            break;
+
+          case 'ERROR':
+            setOnlineError(data.message);
+            break;
+        }
+      } catch (err) {
+        console.error('WS client message error:', err);
+      }
+    };
+
+    ws.onerror = () => {
+      setOnlineError('Multiplayer server connection error.');
+    };
+
+    ws.onclose = () => {
+      // Clean up
+    };
+
+    wsRef.current = ws;
+    return ws;
+  }, []);
+
+  // Send input to opponent over WebSocket
+  const broadcastInput = useCallback((vx: number, vy: number) => {
+    if (!roomCode || !playerSlot || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({
+      type: 'GAME_INPUT',
+      vx,
+      vy,
+      slot: playerSlot
+    }));
+  }, [roomCode, playerSlot]);
+
+  // Create Room
+  const handleCreateOnlineRoom = () => {
+    setOnlineError(null);
+    const ws = getWebSocket();
+    const sendCreate = () => {
+      ws.send(JSON.stringify({
+        type: 'CREATE_ROOM',
+        name: fighter1.name
+      }));
+    };
+    if (ws.readyState === WebSocket.OPEN) {
+      sendCreate();
+    } else {
+      ws.onopen = () => sendCreate();
+    }
+  };
+
+  // Join Room
+  const handleJoinOnlineRoom = (code: string) => {
+    setOnlineError(null);
+    const ws = getWebSocket();
+    const sendJoin = () => {
+      ws.send(JSON.stringify({
+        type: 'JOIN_ROOM',
+        code: code.trim(),
+        name: fighter2.name
+      }));
+    };
+    if (ws.readyState === WebSocket.OPEN) {
+      sendJoin();
+    } else {
+      ws.onopen = () => sendJoin();
+    }
+  };
+
+  // Keyboard controls for single, 2-player, and online modes
   useEffect(() => {
     const keysPressed: { [key: string]: boolean } = {};
 
@@ -90,6 +228,25 @@ export default function App() {
     };
 
     const updateKeyMoves = () => {
+      // In Online mode:
+      if (roomCode && playerSlot) {
+        let mx = 0;
+        let my = 0;
+        if (keysPressed['w'] || keysPressed['arrowup']) my -= 1;
+        if (keysPressed['s'] || keysPressed['arrowdown']) my += 1;
+        if (keysPressed['a'] || keysPressed['arrowleft']) mx -= 1;
+        if (keysPressed['d'] || keysPressed['arrowright']) mx += 1;
+
+        if (playerSlot === 'p1') {
+          setManualMoveP1({ x: mx, y: my });
+        } else {
+          setManualMoveP2({ x: mx, y: my });
+        }
+        broadcastInput(mx, my);
+        return;
+      }
+
+      // Offline local modes:
       if (gameMode === 'single' || gameMode === 'twoplayer') {
         let p1x = 0;
         let p1y = 0;
@@ -117,7 +274,33 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [gameMode]);
+  }, [gameMode, roomCode, playerSlot, broadcastInput]);
+
+  // Exact Video Meme Sound Trigger:
+  // "ओहो हमारे गांव में सरकारी स्कूल ठीक करो..." -> "लवडे न भोजन" with subtitles
+  const handlePlayVideoDialogue = useCallback(() => {
+    soundEngine.playViralDialogueSequence(setActiveSubtitle);
+  }, []);
+
+  // Automated dialogue loop during fight (plays every 15 seconds, starting 2.5s into battle)
+  useEffect(() => {
+    if (!isPlaying || winner || isMuted) return;
+
+    const initialTimer = setTimeout(() => {
+      handlePlayVideoDialogue();
+    }, 2500);
+
+    const interval = setInterval(() => {
+      if (isPlaying && !winner && !isMuted) {
+        handlePlayVideoDialogue();
+      }
+    }, 15000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [isPlaying, winner, isMuted, handlePlayVideoDialogue]);
 
   // HP callback
   const handleUpdateHp = useCallback((f1Hp: number, f2Hp: number) => {
@@ -130,8 +313,8 @@ export default function App() {
     setWinner(winningFighter);
   }, []);
 
-  // Restart match
-  const handleRestart = useCallback(() => {
+  // Local restart helper
+  const handleLocalRestart = useCallback(() => {
     setWinner(null);
     setFighter1((prev) => ({
       ...prev,
@@ -156,6 +339,14 @@ export default function App() {
     setIsPlaying(true);
     soundEngine.playPickup();
   }, []);
+
+  // Restart match (syncs with room if in online match)
+  const handleRestart = useCallback(() => {
+    handleLocalRestart();
+    if (roomCode && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'RESTART_MATCH' }));
+    }
+  }, [roomCode, handleLocalRestart]);
 
   // Update fighter 1 preset
   const handleSelectF1 = (preset: CharacterPreset) => {
@@ -187,21 +378,6 @@ export default function App() {
     }));
   };
 
-  // Random Meme sound
-  const handleRandomMemeSound = () => {
-    const list = [
-      { text: 'Wah Modi ji Wah!', char: 'Modi ji' },
-      { text: 'Aho gaon me sarkari school theek karo...', char: 'Abhijit dipke' },
-      { text: 'Lene ke dene pad gaye!', char: 'Abhijit dipke' },
-      { text: 'Arey bhai bhai bhai!', char: 'Abhijit dipke' },
-      { text: 'Maza aaya!', char: 'Rahul ji' },
-      { text: 'Khatam! Tata! Bye-bye!', char: 'Modi ji' },
-      { text: 'Abki baar arena paar!', char: 'Modi ji' }
-    ];
-    const pick = list[Math.floor(Math.random() * list.length)];
-    soundEngine.playMemeVoice(pick.text, pick.char);
-  };
-
   // Sound toggle
   const handleToggleMute = () => {
     const newMuted = !isMuted;
@@ -227,28 +403,39 @@ export default function App() {
             gameMode={gameMode}
             manualMoveP1={manualMoveP1}
             manualMoveP2={manualMoveP2}
+            activeSubtitle={activeSubtitle}
           />
 
           {/* Winner popup modal */}
           <WinnerModal winner={winner} onRestart={handleRestart} />
         </div>
 
-        {/* On-screen Virtual Joysticks when in Interactive Play Mode */}
-        {gameMode !== 'spectate' && (
+        {/* On-screen Virtual Joysticks when in Interactive Play Mode or Online Mode */}
+        {((gameMode !== 'spectate') || (roomCode !== null)) && (
           <div className="w-full max-w-[500px] flex justify-between px-6 pt-2 pb-1">
-            <VirtualJoystick
-              label={`${fighter1.name} (Move)`}
-              color={fighter1.barColor}
-              onMove={setManualMoveP1}
-            />
-
-            {gameMode === 'twoplayer' && (
+            {/* Player 1 Joystick */}
+            {(!roomCode || playerSlot === 'p1') && (
               <VirtualJoystick
-                label={`${fighter2.name} (Move)`}
-                color={fighter2.barColor}
-                onMove={setManualMoveP2}
+                label={roomCode ? `You (${fighter1.name})` : `${fighter1.name} (Move)`}
+                color={fighter1.barColor}
+                onMove={(vec) => {
+                  setManualMoveP1(vec);
+                  if (roomCode) broadcastInput(vec.x, vec.y);
+                }}
               />
             )}
+
+            {/* Player 2 Joystick (in local 2-player or if local player is p2) */}
+            {(!roomCode && gameMode === 'twoplayer') || (roomCode && playerSlot === 'p2') ? (
+              <VirtualJoystick
+                label={roomCode ? `You (${fighter2.name})` : `${fighter2.name} (Move)`}
+                color={fighter2.barColor}
+                onMove={(vec) => {
+                  setManualMoveP2(vec);
+                  if (roomCode) broadcastInput(vec.x, vec.y);
+                }}
+              />
+            ) : null}
           </div>
         )}
       </main>
@@ -266,10 +453,26 @@ export default function App() {
         onToggleMute={handleToggleMute}
         onOpenCharacterSelect={() => setIsCharModalOpen(true)}
         onOpenAppExport={() => setIsExportModalOpen(true)}
-        onRandomMemeSound={handleRandomMemeSound}
+        onPlayVideoDialogue={handlePlayVideoDialogue}
+        onOpenOnlineModal={() => setIsOnlineModalOpen(true)}
+        isOnlineConnected={opponentName !== null}
+        onlineRoomCode={roomCode}
       />
 
-      {/* Modals */}
+      {/* Online Multiplayer Room Code Modal */}
+      <OnlineRoomModal
+        isOpen={isOnlineModalOpen}
+        onClose={() => setIsOnlineModalOpen(false)}
+        onCreateRoom={handleCreateOnlineRoom}
+        onJoinRoom={handleJoinOnlineRoom}
+        roomCode={roomCode}
+        playerSlot={playerSlot}
+        isWaitingForOpponent={isWaitingForOpponent}
+        opponentName={opponentName}
+        error={onlineError}
+      />
+
+      {/* Fighter Roster Modal */}
       <CharacterSelectModal
         isOpen={isCharModalOpen}
         onClose={() => setIsCharModalOpen(false)}
@@ -279,6 +482,7 @@ export default function App() {
         onSelectF2={handleSelectF2}
       />
 
+      {/* App Export & Mobile Guide Modal */}
       <AppExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}

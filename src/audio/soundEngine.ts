@@ -403,35 +403,46 @@ class SoundEngine {
 
   // --- MEME VOICE LINES & FUNNY SPEECH AUDIO ---
 
-  public playMemeVoice(text: string, character: string = 'modi') {
+  public playViralDialogueSequence(onSubtitle?: (text: string | null) => void) {
     if (!this.voiceEnabled || this.isMuted) return;
-    const now = Date.now();
-    // Prevent voice overlapping chaos: minimum 1.5s between shouts
-    if (now - this.lastVoiceTime < 1400) return;
-    this.lastVoiceTime = now;
 
-    // Use Web Speech API if supported for clear natural Indian Hindi/English meme voice lines!
-    if ('speechSynthesis' in window) {
+    // Part 1: Voice 1 asks "ओहो हमारे गांव में सरकारी स्कूल ठीक करो..."
+    if (onSubtitle) onSubtitle('ओहो हमारे गांव में सरकारी स्कूल ठीक करो...');
+    this.speakText('ओहो हमारे गांव में सरकारी स्कूल ठीक करो...', 'abhijit');
+
+    // Part 2: Voice 2 answers "लवडे न भोजन"
+    setTimeout(() => {
+      if (this.isMuted) return;
+      if (onSubtitle) onSubtitle('लवडे न भोजन');
+      this.speakText('लवडे न भोजन', 'modi');
+      this.playMemeLaugh();
+    }, 2400);
+
+    // Clear subtitle after 4.8 seconds
+    setTimeout(() => {
+      if (onSubtitle) onSubtitle(null);
+    }, 4800);
+  }
+
+  public speakText(text: string, character: 'modi' | 'abhijit' | string) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
-        window.speechSynthesis.cancel(); // cancel pending
+        window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
         utter.volume = this.volume;
+        utter.lang = 'hi-IN';
 
         if (character.toLowerCase().includes('modi')) {
-          utter.pitch = 0.85; // authoritative deeper resonance
+          utter.pitch = 0.82;
           utter.rate = 0.95;
-        } else if (character.toLowerCase().includes('abhijit')) {
-          utter.pitch = 1.15; // younger, spirited, faster
-          utter.rate = 1.1;
         } else {
-          utter.pitch = 1.0;
-          utter.rate = 1.0;
+          utter.pitch = 1.18;
+          utter.rate = 1.1;
         }
 
-        // Try to pick an Indian voice if available
         const voices = window.speechSynthesis.getVoices();
         const indianVoice = voices.find(
-          (v) => v.lang.includes('hi') || v.lang.includes('IN') || v.name.toLowerCase().includes('india')
+          (v) => v.lang.startsWith('hi') || v.lang.includes('IN') || v.name.toLowerCase().includes('india')
         );
         if (indianVoice) {
           utter.voice = indianVoice;
@@ -439,12 +450,43 @@ class SoundEngine {
 
         window.speechSynthesis.speak(utter);
       } catch {
-        // fallback to procedural voice buzz
         this.playProceduralVoiceBite();
       }
     } else {
       this.playProceduralVoiceBite();
     }
+  }
+
+  public playMemeLaugh() {
+    this.initCtx();
+    if (!this.ctx || !this.masterGain || this.isMuted) return;
+
+    // Chuckle frequencies
+    const laughs = [440, 520, 480, 560, 420, 500];
+    laughs.forEach((f, i) => {
+      setTimeout(() => {
+        if (!this.ctx || !this.masterGain || this.isMuted) return;
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, t);
+        gain.gain.setValueAtTime(0.25, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(t);
+        osc.stop(t + 0.1);
+      }, i * 110);
+    });
+  }
+
+  public playMemeVoice(text: string, character: string = 'modi') {
+    if (!this.voiceEnabled || this.isMuted) return;
+    const now = Date.now();
+    if (now - this.lastVoiceTime < 1200) return;
+    this.lastVoiceTime = now;
+    this.speakText(text, character);
   }
 
   private playProceduralVoiceBite() {

@@ -21,13 +21,19 @@ An action-packed 2D circular radar arena combat game inspired by the viral duel 
   - ⚡ **Plasma Blaster**: High-speed sci-fi laser ray.
   - 💖 **Medical Heart**: Restores +25 HP on touch with healing chime.
   - 💣 **Dynamite Bomb**: Heavy explosive causing an arena shockwave.
-- **Audio & Viral Meme Voice Lines**:
+- **Audio & Exact Video Meme Dialogue**:
+  - Exact dialogue from the video: Voice 1 asks *"ओहो हमारे गांव में सरकारी स्कूल ठीक करो..."* and Voice 2 delivers the punchline *"लवडे न भोजन"* with meme laughter and animated on-screen subtitles.
+  - Automatic dialogue loop during battles (every 15s) and manual instant trigger button.
   - 100% offline Web Audio API sound synthesizer for all weapons, bullet impacts, sword slashes, health chimes, and victory fanfare.
-  - Viral Indian meme voice lines (*"Wah Modi ji Wah!"*, *"Aho gaon me sarkari school theek karo..."*, *"Lene ke dene pad gaye!"*, *"Maza aaya!"*, *"Khatam! Tata! Bye-bye!"*).
+- **Online Multiplayer with Room Codes**:
+  - **Create Room**: Generates an instant 4-digit room code (e.g. `4829`).
+  - **Join Room**: Enter the room code from any device, phone, or computer to join as Player 2.
+  - Real-time WebSocket synchronization of joystick movements, health points, and attacks.
 - **Multiple Game Modes**:
   - **Auto Battle**: Autonomous AI vs AI spectator simulation (exact recreation of the viral video).
   - **Play P1**: Control Player 1 via Keyboard (WASD / Arrow keys) or on-screen Virtual Joystick.
   - **2-Player Local**: Dual control fight on the same device.
+  - **Online Codes**: Real-time room-code based online multiplayer!
 - **Game Speed Multiplier**: 1x, 1.5x, and 2x speed for fast-paced gameplay.
 - **Customizable Fighters**: Play as Modi ji, Abhijit dipke, Rahul ji, Yogi ji, or upload any photo from your phone/PC and set your own fighter name!
 - **Winner Victory Screen**: Authentic popup card with winner announcement, restart button, and celebratory confetti.

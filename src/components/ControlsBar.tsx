@@ -15,7 +15,10 @@ interface ControlsBarProps {
   onToggleMute: () => void;
   onOpenCharacterSelect: () => void;
   onOpenAppExport: () => void;
-  onRandomMemeSound: () => void;
+  onPlayVideoDialogue: () => void;
+  onOpenOnlineModal: () => void;
+  isOnlineConnected?: boolean;
+  onlineRoomCode?: string | null;
 }
 
 export const ControlsBar: React.FC<ControlsBarProps> = ({
@@ -30,14 +33,33 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
   onToggleMute,
   onOpenCharacterSelect,
   onOpenAppExport,
-  onRandomMemeSound
+  onPlayVideoDialogue,
+  onOpenOnlineModal,
+  isOnlineConnected,
+  onlineRoomCode
 }) => {
   return (
     <footer className="w-full max-w-[540px] mx-auto px-4 pb-4 pt-1 select-none space-y-2">
+      {/* Online Room Banner if active */}
+      {onlineRoomCode && (
+        <div className="flex items-center justify-between px-3 py-1.5 bg-indigo-950/70 border border-indigo-500/50 rounded-xl text-xs">
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${isOnlineConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span className="font-semibold text-indigo-200">
+              Online Match Code: <strong className="text-white font-mono">{onlineRoomCode}</strong>
+            </span>
+          </div>
+          <span className="text-[11px] text-indigo-300">
+            {isOnlineConnected ? '🟢 Opponent Connected' : '🟡 Waiting for Player 2...'}
+          </span>
+        </div>
+      )}
+
       {/* Primary Action Controls Row */}
       <div className="flex items-center justify-between gap-2 p-2 bg-slate-900/90 border border-slate-800/80 rounded-2xl backdrop-blur-md shadow-xl">
         {/* Play / Pause */}
         <button
+          id="play-pause-btn"
           onClick={onTogglePlay}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-md ${
             isPlaying
@@ -52,6 +74,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
 
         {/* Restart */}
         <button
+          id="restart-btn"
           onClick={onRestart}
           className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl transition-all cursor-pointer"
           title="Restart Battle"
@@ -76,18 +99,20 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
           ))}
         </div>
 
-        {/* Meme Audio Shout Trigger */}
+        {/* Exact Video Meme Dialogue: "सरकारी स्कूल ठीक करो" -> "लवडे न भोजन" */}
         <button
-          onClick={onRandomMemeSound}
-          className="flex items-center gap-1 px-2.5 py-2 bg-rose-950/60 border border-rose-600/40 hover:bg-rose-900/60 text-rose-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
-          title="Play viral meme voice clip"
+          id="video-sound-trigger-btn"
+          onClick={onPlayVideoDialogue}
+          className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-md shadow-red-900/40 active:scale-95"
+          title="Play exact video meme audio dialog"
         >
-          <MessageSquare className="w-3.5 h-3.5 text-rose-400" />
-          <span className="hidden sm:inline">Meme Voice</span>
+          <MessageSquare className="w-3.5 h-3.5 fill-current" />
+          <span>Video Dialogue</span>
         </button>
 
         {/* Audio Mute */}
         <button
+          id="mute-toggle-btn"
           onClick={onToggleMute}
           className={`p-2 rounded-xl transition-all cursor-pointer ${
             isMuted
@@ -100,7 +125,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
         </button>
       </div>
 
-      {/* Secondary Bar: Mode Switcher & Modals */}
+      {/* Secondary Bar: Mode Switcher & Online Codes */}
       <div className="flex items-center justify-between gap-2 text-xs">
         {/* Mode Selector */}
         <div className="flex items-center bg-slate-900/80 border border-slate-800 rounded-xl p-1 text-[11px] font-medium">
@@ -130,24 +155,35 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
           </button>
         </div>
 
-        {/* Right action triggers */}
+        {/* Right action triggers: Online Room & ZIP */}
         <div className="flex items-center gap-1.5">
+          {/* Online Multiplayer with Codes */}
+          <button
+            id="open-online-modal-btn"
+            onClick={onOpenOnlineModal}
+            className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-indigo-900/30 active:scale-95"
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Online Codes</span>
+          </button>
+
           {/* Change Fighters */}
           <button
+            id="change-fighters-btn"
             onClick={onOpenCharacterSelect}
             className="px-2.5 py-1.5 bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-xl font-medium text-[11px] flex items-center gap-1.5 transition-all cursor-pointer"
           >
-            <Users className="w-3.5 h-3.5 text-sky-400" />
             <span>Fighters</span>
           </button>
 
           {/* Download ZIP */}
           <button
+            id="download-zip-btn"
             onClick={onOpenAppExport}
-            className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-red-900/30"
+            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Get ZIP</span>
+            <span className="hidden sm:inline">ZIP</span>
           </button>
         </div>
       </div>
