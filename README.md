@@ -37,7 +37,6 @@ An action-packed 2D circular radar arena combat game inspired by the viral duel 
 - **Game Speed Multiplier**: 1x, 1.5x, and 2x speed for fast-paced gameplay.
 - **Customizable Fighters**: Play as Modi ji, Abhijit dipke, Rahul ji, Yogi ji, or upload any photo from your phone/PC and set your own fighter name!
 - **Winner Victory Screen**: Authentic popup card with winner announcement, restart button, and celebratory confetti.
-- **Direct Project ZIP Download**: In-browser 1-click exporter to download the complete standalone source code.
 
 ---
 

@@ -4,7 +4,6 @@ import { HealthBarHeader } from './components/HealthBarHeader';
 import { WinnerModal } from './components/WinnerModal';
 import { ControlsBar } from './components/ControlsBar';
 import { CharacterSelectModal } from './components/CharacterSelectModal';
-import { AppExportModal } from './components/AppExportModal';
 import { OnlineRoomModal } from './components/OnlineRoomModal';
 import { VirtualJoystick } from './components/VirtualJoystick';
 import { CHARACTER_PRESETS } from './data/characters';
@@ -73,10 +72,8 @@ export default function App() {
 
   // Modals
   const [isCharModalOpen, setIsCharModalOpen] = useState<boolean>(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState<boolean>(false);
 
-  // Online Multiplayer State
   // Online Multiplayer State
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [playerSlot, setPlayerSlot] = useState<'p1' | 'p2' | null>(null);
@@ -469,7 +466,6 @@ export default function App() {
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
         onOpenCharacterSelect={() => setIsCharModalOpen(true)}
-        onOpenAppExport={() => setIsExportModalOpen(true)}
         onPlayVideoDialogue={handlePlayVideoDialogue}
         onOpenOnlineModal={() => setIsOnlineModalOpen(true)}
         isOnlineConnected={opponentName !== null}
@@ -498,12 +494,6 @@ export default function App() {
         selectedF2={selectedPreset2}
         onSelectF1={handleSelectF1}
         onSelectF2={handleSelectF2}
-      />
-
-      {/* App Export & Mobile Guide Modal */}
-      <AppExportModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Users, Download, Sparkles, MessageSquare } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Users, Sparkles, MessageSquare } from 'lucide-react';
 import { GameMode } from '../types';
 import { soundEngine } from '../audio/soundEngine';
 
@@ -14,7 +14,6 @@ interface ControlsBarProps {
   isMuted: boolean;
   onToggleMute: () => void;
   onOpenCharacterSelect: () => void;
-  onOpenAppExport: () => void;
   onPlayVideoDialogue: () => void;
   onOpenOnlineModal: () => void;
   isOnlineConnected?: boolean;
@@ -32,7 +31,6 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
   isMuted,
   onToggleMute,
   onOpenCharacterSelect,
-  onOpenAppExport,
   onPlayVideoDialogue,
   onOpenOnlineModal,
   isOnlineConnected,
@@ -174,16 +172,6 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
             className="px-2.5 py-1.5 bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-xl font-medium text-[11px] flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <span>Fighters</span>
-          </button>
-
-          {/* Download ZIP */}
-          <button
-            id="download-zip-btn"
-            onClick={onOpenAppExport}
-            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">ZIP</span>
           </button>
         </div>
       </div>
