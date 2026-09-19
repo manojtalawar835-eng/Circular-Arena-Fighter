@@ -13,7 +13,6 @@ interface ArenaCanvasProps {
   gameMode: GameMode;
   manualMoveP1?: { x: number; y: number };
   manualMoveP2?: { x: number; y: number };
-  activeSubtitle?: string | null;
 }
 
 // Preload avatar images for drawing on canvas
@@ -36,8 +35,7 @@ export const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
   gameSpeed,
   gameMode,
   manualMoveP1 = { x: 0, y: 0 },
-  manualMoveP2 = { x: 0, y: 0 },
-  activeSubtitle
+  manualMoveP2 = { x: 0, y: 0 }
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -944,15 +942,6 @@ export const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
         height={520}
         className="w-full h-full rounded-full shadow-2xl touch-none select-none"
       />
-
-      {/* Meme Voice Subtitle Overlay (exact match to video captions: "लवडे न भोजन" / "ओहो हमारे गांव में सरकारी स्कूल ठीक करो...") */}
-      {activeSubtitle && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-4 py-1.5 bg-black/85 backdrop-blur-md border border-red-500/60 rounded-full shadow-xl shadow-red-500/20 text-center animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <span className="text-white font-extrabold text-sm md:text-base tracking-wide drop-shadow-md">
-            {activeSubtitle}
-          </span>
-        </div>
-      )}
     </div>
   );
 };

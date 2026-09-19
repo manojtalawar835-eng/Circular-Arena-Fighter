@@ -28,6 +28,10 @@ export type WeaponType =
   | 'sword' 
   | 'slingshot' 
   | 'ak47' 
+  | 'sniper'
+  | 'minigun'
+  | 'bazooka'
+  | 'deagle'
   | 'flame' 
   | 'trident' 
   | 'shotgun' 
@@ -85,6 +89,14 @@ export interface FloatingText {
   fontSize: number;
 }
 
+export interface CharacterAudio {
+  greetingSound: string;
+  themeMusic: string;
+  memeSounds: string[];
+  attackSound?: string;
+  victorySound?: string;
+}
+
 export interface CharacterPreset {
   id: string;
   name: string;
@@ -95,4 +107,6 @@ export interface CharacterPreset {
   avatarSvg: string; // SVG data or path
   voiceLines: string[];
   speechGreeting: string;
+  audio?: CharacterAudio;
+  customMemeSounds?: string[];
 }

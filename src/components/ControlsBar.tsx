@@ -97,15 +97,15 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
           ))}
         </div>
 
-        {/* Exact Video Meme Dialogue: "सरकारी स्कूल ठीक करो" -> "लवडे न भोजन" */}
+        {/* Real Meme Dialogue Sound */}
         <button
-          id="video-sound-trigger-btn"
+          id="real-sound-trigger-btn"
           onClick={onPlayVideoDialogue}
           className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-md shadow-red-900/40 active:scale-95"
-          title="Play exact video meme audio dialog"
+          title="Play authentic meme dialogue sound"
         >
-          <MessageSquare className="w-3.5 h-3.5 fill-current" />
-          <span>Video Dialogue</span>
+          <Volume2 className="w-3.5 h-3.5 fill-current" />
+          <span>Real Sound</span>
         </button>
 
         {/* Audio Mute */}

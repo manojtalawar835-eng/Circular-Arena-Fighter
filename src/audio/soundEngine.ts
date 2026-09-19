@@ -401,84 +401,53 @@ class SoundEngine {
     }
   }
 
-  // --- MEME VOICE LINES & FUNNY SPEECH AUDIO ---
+  // --- REAL CHARACTER VOICES & MEME AUDIO ---
 
-  public playViralDialogueSequence(onSubtitle?: (text: string | null) => void) {
-    if (!this.voiceEnabled || this.isMuted) return;
-
-    // Part 1: Voice 1 asks "ओहो हमारे गांव में सरकारी स्कूल ठीक करो..."
-    if (onSubtitle) onSubtitle('ओहो हमारे गांव में सरकारी स्कूल ठीक करो...');
-    this.speakText('ओहो हमारे गांव में सरकारी स्कूल ठीक करो...', 'abhijit');
-
-    // Part 2: Voice 2 answers "लवडे न भोजन"
-    setTimeout(() => {
-      if (this.isMuted) return;
-      if (onSubtitle) onSubtitle('लवडे न भोजन');
-      this.speakText('लवडे न भोजन', 'modi');
-      this.playMemeLaugh();
-    }, 2400);
-
-    // Clear subtitle after 4.8 seconds
-    setTimeout(() => {
-      if (onSubtitle) onSubtitle(null);
-    }, 4800);
-  }
-
-  public speakText(text: string, character: 'modi' | 'abhijit' | string) {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.volume = this.volume;
-        utter.lang = 'hi-IN';
-
-        if (character.toLowerCase().includes('modi')) {
-          utter.pitch = 0.82;
-          utter.rate = 0.95;
-        } else {
-          utter.pitch = 1.18;
-          utter.rate = 1.1;
-        }
-
-        const voices = window.speechSynthesis.getVoices();
-        const indianVoice = voices.find(
-          (v) => v.lang.startsWith('hi') || v.lang.includes('IN') || v.name.toLowerCase().includes('india')
-        );
-        if (indianVoice) {
-          utter.voice = indianVoice;
-        }
-
-        window.speechSynthesis.speak(utter);
-      } catch {
-        this.playProceduralVoiceBite();
-      }
-    } else {
-      this.playProceduralVoiceBite();
+  private playAudioFile(url: string, volumeScale: number = 1.0) {
+    if (this.isMuted) return;
+    try {
+      const audio = new Audio(url);
+      audio.volume = Math.max(0, Math.min(1, this.volume * volumeScale));
+      audio.play().catch(() => {
+        // Fallback or autonavigation block
+      });
+    } catch {
+      // Audio element creation fallback
     }
   }
 
-  public playMemeLaugh() {
-    this.initCtx();
-    if (!this.ctx || !this.masterGain || this.isMuted) return;
+  public playFightBell() {
+    this.playAudioFile('/audio/fight_bell.mp3', 0.9);
+  }
 
-    // Chuckle frequencies
-    const laughs = [440, 520, 480, 560, 420, 500];
-    laughs.forEach((f, i) => {
-      setTimeout(() => {
-        if (!this.ctx || !this.masterGain || this.isMuted) return;
-        const t = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(f, t);
-        gain.gain.setValueAtTime(0.25, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.1);
-      }, i * 110);
-    });
+  public playPunchHit() {
+    this.playAudioFile('/audio/punch_hit.mp3', 0.85);
+  }
+
+  /**
+   * Plays the real viral audio sequence:
+   * 1. Abhijit Dipke's real voice asking about the village government school
+   * 2. Modi ji's real viral punchline audio
+   * 3. Authentic meme laugh track
+   * No subtitles or speech captions are shown.
+   */
+  public playViralDialogueSequence() {
+    if (!this.voiceEnabled || this.isMuted) return;
+
+    // 1. Abhijit Dipke's real voice
+    this.playAudioFile('/audio/abhijit_dialogue.mp3', 1.0);
+
+    // 2. Modi ji's real voice ("लवडे न भोजन")
+    setTimeout(() => {
+      if (this.isMuted) return;
+      this.playAudioFile('/audio/modi_dialogue.mp3', 1.0);
+    }, 2500);
+
+    // 3. Real meme laugh track
+    setTimeout(() => {
+      if (this.isMuted) return;
+      this.playAudioFile('/audio/meme_laugh.mp3', 0.85);
+    }, 4300);
   }
 
   public playMemeVoice(text: string, character: string = 'modi') {
@@ -486,31 +455,27 @@ class SoundEngine {
     const now = Date.now();
     if (now - this.lastVoiceTime < 1200) return;
     this.lastVoiceTime = now;
-    this.speakText(text, character);
+
+    const charLower = character.toLowerCase();
+    if (charLower.includes('modi')) {
+      const clips = ['/audio/modi_dialogue.mp3', '/audio/modi_mitron.mp3', '/audio/modi_wah.mp3'];
+      const clip = clips[Math.floor(Math.random() * clips.length)];
+      this.playAudioFile(clip, 1.0);
+    } else if (charLower.includes('abhijit')) {
+      this.playAudioFile('/audio/abhijit_dialogue.mp3', 1.0);
+    } else if (charLower.includes('rahul')) {
+      const clips = ['/audio/rahul_maza.mp3', '/audio/rahul_khatam.mp3'];
+      const clip = clips[Math.floor(Math.random() * clips.length)];
+      this.playAudioFile(clip, 1.0);
+    } else if (charLower.includes('yogi')) {
+      this.playAudioFile('/audio/yogi_action.mp3', 1.0);
+    } else {
+      this.playAudioFile('/audio/modi_dialogue.mp3', 1.0);
+    }
   }
 
-  private playProceduralVoiceBite() {
-    this.initCtx();
-    if (!this.ctx || !this.masterGain || this.isMuted) return;
-
-    // Funny synth "Wah wah wah!" cartoon talk
-    const notes = [320, 480, 360, 520];
-    notes.forEach((freq, idx) => {
-      setTimeout(() => {
-        if (!this.ctx || !this.masterGain || this.isMuted) return;
-        const t = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(freq, t);
-        gain.gain.setValueAtTime(0.3, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.12);
-      }, idx * 90);
-    });
+  public playMemeLaugh() {
+    this.playAudioFile('/audio/meme_laugh.mp3', 0.85);
   }
 }
 

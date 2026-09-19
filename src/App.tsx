@@ -67,9 +67,6 @@ export default function App() {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [winner, setWinner] = useState<Fighter | null>(null);
 
-  // Subtitle banner for video meme audio ("लवडे न भोजन" / "ओहो हमारे गांव में सरकारी स्कूल ठीक करो...")
-  const [activeSubtitle, setActiveSubtitle] = useState<string | null>(null);
-
   // Modals
   const [isCharModalOpen, setIsCharModalOpen] = useState<boolean>(false);
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState<boolean>(false);
@@ -197,7 +194,7 @@ export default function App() {
       weaponAmmo: 0
     }));
     setIsPlaying(true);
-    soundEngine.playPickup();
+    soundEngine.playFightBell();
   }, []);
 
   // Real-time synchronization loop
@@ -309,10 +306,10 @@ export default function App() {
     };
   }, [gameMode, roomCode, playerSlot, broadcastInput]);
 
-  // Exact Video Meme Sound Trigger:
-  // "ओहो हमारे गांव में सरकारी स्कूल ठीक करो..." -> "लवडे न भोजन" with subtitles
+  // Real Viral Meme Sound Trigger:
+  // Plays the authentic dialogue and meme laugh audio without captions/subtitles
   const handlePlayVideoDialogue = useCallback(() => {
-    soundEngine.playViralDialogueSequence(setActiveSubtitle);
+    soundEngine.playViralDialogueSequence();
   }, []);
 
   // Automated dialogue loop during fight (plays every 15 seconds, starting 2.5s into battle)
@@ -417,7 +414,6 @@ export default function App() {
             gameMode={gameMode}
             manualMoveP1={manualMoveP1}
             manualMoveP2={manualMoveP2}
-            activeSubtitle={activeSubtitle}
           />
 
           {/* Winner popup modal */}
